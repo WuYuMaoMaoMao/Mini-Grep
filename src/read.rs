@@ -14,7 +14,6 @@ impl GetDirectory for Directory {
             path: self.path.clone(),
             files: self.files.clone(),
         };
-        println!("{:?}", dir.files);
         return dir;
     }
 }
