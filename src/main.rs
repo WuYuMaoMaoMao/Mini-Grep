@@ -1,19 +1,20 @@
 pub mod env;
 pub mod read;
-use std::{fs, io::stdin, io::BufReader, process};
+use std::{self, fs, fs::File, io, io::stdin, io::Read};
 
 pub fn remove_quotes(s: &str) -> String {
     s.trim_matches(|c| c == '\"' || c == '\'').to_string()
 }
-pub fn read_file_line_by_line(filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let file = fs::File::open(filepath)?;
-    let reader = BufReader::new(file);
-
-    for line in reader.read_lines() {
-        println!("{}", line?);
-    }
-
-    Ok(())
+pub fn read_from_file(filepath: &str) -> Result<String, io::Error> {
+    let mut f = File::open(filepath)?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+pub fn change_filepath_for_windows(filepath: &str) -> String {
+    let mut new_filepath = filepath.to_string();
+    new_filepath = new_filepath.replace("\\", "/");
+    new_filepath
 }
 fn main() {
     print!(
@@ -113,14 +114,22 @@ pub fn mini_log_directory() {
 }
 pub fn cat_file(input: String) {
     let file_name = input.trim_end().split("cat");
+    let mut file = vec![];
     for part in file_name {
-        println!("{}", part.trim());
+        if part.trim() != "" {
+            let file_path = change_filepath_for_windows(part.trim());
+            file.push(file_path);
+        }
     }
-    // let file = fs::read_to_string("read.rs");
-    // if file.is_err() {
-    //     println!("读取文件失败");
-    // }
-    // let file_match = file.unwrap();
-    // println!("{}", file_match);
+    let file_path = &file[0];
+    let result = read_from_file(file_path.as_str()); // 读取文件
+    match result {
+        Ok(v) => {
+            println!("{}", v);
+        }
+        Err(_) => {
+            println!("读取文件失败");
+        }
+    };
     mini_shell();
 }
