@@ -16,6 +16,19 @@ pub fn change_filepath_for_windows(filepath: &str) -> String {
     new_filepath = new_filepath.replace("\\", "/");
     new_filepath
 }
+pub fn get_current_dir() -> std::io::Result<()> {
+    let dir = std::env::current_dir();
+    return match dir {
+        Ok(dir) => {
+            println!("Current directory: {:?}", dir);
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            Err(e)
+        }
+    };
+}
 fn main() {
     print!(
         "
@@ -57,7 +70,8 @@ pub fn mini_log_help() {
     println!("2.MiniLog --version:查看版本");
     println!("3.MiniLog --author:查看作者");
     println!("4.cat <文件名>:查看文件");
-    println!("5.exit:退出MiniShell");
+    println!("5.find <关键词> in <目录>:查找关键字");
+    println!("6.exit:退出MiniShell");
     mini_shell();
 }
 pub fn mini_log_version() {
@@ -67,7 +81,7 @@ pub fn mini_log_version() {
 }
 pub fn mini_log_author() {
     let cargo_author = env::CargoFile::get_authors();
-    println!("MiniLog --author: {}", cargo_author);
+    println!("MiniLog author:{}", cargo_author);
     mini_shell();
 }
 pub fn mini_log_directory() {
@@ -112,7 +126,9 @@ pub fn mini_log_directory() {
     }
     mini_shell();
 }
+
 pub fn cat_file(input: String) {
+    get_current_dir();
     let file_name = input.trim_end().split("cat");
     let mut file = vec![];
     for part in file_name {
