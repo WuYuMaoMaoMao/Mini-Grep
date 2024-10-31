@@ -1,3 +1,5 @@
+pub mod cd;
+pub mod dir;
 pub mod env;
 pub mod ls;
 pub mod read;
@@ -22,21 +24,7 @@ pub fn change_filepath_for_windows(filepath: &str) -> String {
     new_filepath = new_filepath.replace("\\", "/");
     new_filepath
 }
-//获取当前目录
-pub fn get_current_dir() -> std::io::Result<PathBuf> {
-    let dir = std::env::current_dir();
-    return match dir {
-        Ok(dir) => {
-            let str = dir.display().to_string() + ">";
-            colorize_print(str, Colors::BrightBlueFg);
-            Ok(dir)
-        }
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            Err(e)
-        }
-    };
-}
+
 // pub fn change_color() {
 //     println!("{}", "This is so cool".color(Colors::BrightGreenFg));
 //     let this: String = colorize_this("wowzers", Colors::BrightBlackBg);
@@ -56,11 +44,17 @@ fn main() {
     );
     colorize_println("Welcome to the mini shell", Colors::BrightBlueFg);
     colorize_println("查看帮助:MiniLog --help", Colors::BrightBlueFg);
-    mini_shell();
+    mini_shell(" ".to_string());
 }
-
-pub fn mini_shell() {
-    get_current_dir().expect("Failed to get current directory");
+pub fn print_path(path: String) {
+    if path == " ".to_string() {
+        let dir = dir::Dir::get_current_dir(path).expect("Failed to get current directory") + ">";
+        colorize_print(dir, Colors::BrightBlueFg);
+    } else {
+    }
+}
+pub fn mini_shell(input: String) {
+    print_path(input);
     let _ = io::stdout().flush();
     let mut input = String::new();
     stdin().read_line(&mut input).expect("Failed to read line");
@@ -75,13 +69,22 @@ pub fn mini_shell() {
     } else if input.trim().to_string().find("cat") != None {
         cat_file(input);
     } else if input.trim().to_string().to_lowercase() == "ls" {
-        // ls::ls();
+        let dir = dir::Dir::get_current_dir(input).expect("failed to get current directory");
+        let lists = ls::LS::ls(dir);
+        ls::LS::print_ls_directory(lists);
+        mini_shell(" ".to_string());
+    } else if input.trim().to_string().find("cd") != None {
+        if input.trim().to_string().find("cd ..") != None {
+            cd::CD::get_prev_dir(input);
+        } else {
+            cd::CD::get_next_dir(input);
+        }
     } else if input.trim().to_string().to_uppercase() == "EXIT" {
         colorize_println("退出MiniShell", Colors::BrightBlueFg);
         std::process::exit(0);
     } else {
         colorize_println("请输入正确的命令", Colors::BrightBlueFg);
-        mini_shell();
+        mini_shell(" ".to_string());
     }
 }
 pub fn mini_log_help() {
@@ -98,62 +101,32 @@ pub fn mini_log_help() {
         Colors::BrightMagentaFg,
     );
     colorize_println("6.ls:查看当前路径目录", Colors::RedFg);
-    colorize_println("7.exit:退出MiniShell", Colors::BrightBlueFg);
-    mini_shell();
+    colorize_println("7.cd <路径>:切换路径", Colors::BrightBlueFg);
+    colorize_println("8.exit:退出MiniShell", Colors::BrightBlueFg);
+    mini_shell(" ".to_string());
 }
 pub fn mini_log_version() {
     let str = "MiniLog version:".to_string();
     let cargo_version = str + env::CargoFile::get_version().as_str();
     println!("{}", cargo_version.color(Colors::BrightCyanFg));
-    mini_shell();
+    mini_shell(" ".to_string());
 }
 pub fn mini_log_author() {
     let str = "MiniLog author: ".to_string();
     let author_str = str + env::CargoFile::get_authors().as_str();
     println!("{}", author_str.color(Colors::BrightGreenFg));
-    mini_shell();
+    mini_shell(" ".to_string());
 }
 pub fn mini_log_directory() {
     colorize_println("请输入要读取的绝对文件路径: ", Colors::BrightRedFg);
     let mut input = String::new();
     stdin().read_line(&mut input).expect("Failed to read line");
-    let mut file_name = Vec::new();
-
-    let dir = fs::read_dir(input.trim_end());
-    if dir.is_err() {
-        colorize_println("读取文件失败 ", Colors::BrightRedFg);
-    }
-    let dir_match = dir.unwrap();
-    for entry in dir_match {
-        let file_name_str = entry.unwrap().file_name().into_string();
-        if file_name_str.is_err() {
-            colorize_println("文件名转换失败", Colors::BrightRedFg);
-        }
-        match file_name_str {
-            Ok(v) => {
-                file_name.push(String::from(v));
-            }
-            Err(_) => {
-                println!("文件名转换失败");
-            }
-        };
-    }
-    // println!("{:?}", file_name);
-    let dir_name = input.trim_end().split("\\");
-
-    let dir_name_vec: Vec<&str> = dir_name.collect();
-    // print!("{:?}", dir_name_vec[dir_name_vec.len() - 1]);
-
-    let directory = read::Directory {
-        path: input.trim().to_string(),
-        name: String::from(dir_name_vec[dir_name_vec.len() - 1]),
-        files: file_name,
-    };
+    let str = dir::Dir::get_next_dir(input);
     colorize_println("当前目录下有:", Colors::BrightRedFg);
-    for file in directory.files {
+    for file in str {
         println!("{}", file.color(Colors::BrightRedFg));
     }
-    mini_shell();
+    mini_shell(" ".to_string());
 }
 
 pub fn cat_file(input: String) {
@@ -175,5 +148,5 @@ pub fn cat_file(input: String) {
             println!("读取文件失败");
         }
     };
-    mini_shell();
+    mini_shell(" ".to_string());
 }
