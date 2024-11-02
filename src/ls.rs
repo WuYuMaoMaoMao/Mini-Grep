@@ -3,7 +3,7 @@ use colorized::*;
 pub struct LS {}
 impl LS {
     pub fn ls(input: String) -> Vec<String> {
-        return dir::Dir::get_next_dir(input);
+        return dir::Dir::get_current_directory(input);
     }
     pub fn print_ls_directory(dir: Vec<String>) {
         for i in dir {

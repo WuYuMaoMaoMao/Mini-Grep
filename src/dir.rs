@@ -1,23 +1,88 @@
+use crate::ls;
 use crate::read;
 use colorized::*;
-use std::fs;
+use std::{env::current_dir, fs, path::PathBuf};
 pub struct Dir {}
-
+pub fn convert_pathbuf_to_string(pathbuf: &PathBuf) -> String {
+    let path = pathbuf.to_string_lossy().to_string();
+    path
+}
+pub fn convert_pathbuf_to_result(path: PathBuf) -> Result<PathBuf, std::io::Error> {
+    Ok(path)
+}
 impl Dir {
     //获取当前目录
-    pub fn get_current_dir(input: String) -> std::io::Result<String> {
-        let dir = std::env::current_dir();
-        if input == "cd".to_string() {
+    pub fn get_current_dir(
+        input: String,
+        dir: Result<PathBuf, std::io::Error>,
+    ) -> std::io::Result<String> {
+        if input.trim().find("cd ..") != None {
             return match dir {
                 Ok(dir) => {
-                    let str = dir.display().to_string() + "\\" + input.as_str();
-                    Ok(str)
+                    let dir_display = dir.display().to_string();
+                    let str: Vec<&str> = dir_display.split("\\").collect();
+                    let mut str_current = String::new();
+                    if str.len() > 1 {
+                        for i in 0..str.len() - 1 {
+                            if i == 0 {
+                                str_current += str[i];
+                            } else {
+                                str_current += "\\";
+                                str_current += str[i];
+                            }
+                        }
+                    } else {
+                        str_current = str[0].to_string();
+                    }
+                    Ok(str_current)
                 }
                 Err(e) => {
                     eprintln!("Error: {}", e);
                     Err(e)
                 }
             };
+        } else if input.trim().find("cd") != None {
+            let current_input: Vec<&str> = input.trim().split(" ").collect();
+            let input = current_input[1].to_string();
+            if input.contains("\\") {
+                return match dir {
+                    Ok(dir) => Ok(input),
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        Err(e)
+                    }
+                };
+            } else {
+                let current_dir = dir.unwrap().clone();
+                let dir_result = convert_pathbuf_to_result(current_dir.clone());
+                let dir_str = convert_pathbuf_to_string(&current_dir);
+                let dir_list = Self::get_current_directory(dir_str);
+                if dir_list.contains(&input) {
+                    return match dir_result {
+                        Ok(dir) => {
+                            let str = dir.display().to_string() + "\\" + input.as_str();
+                            Ok(str)
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            Err(e)
+                        }
+                    };
+                } else {
+                    let dir_result = convert_pathbuf_to_result(current_dir.clone());
+                    return match dir_result {
+                        Ok(dir) => {
+                            let str = dir.display().to_string();
+                            colorize_println(" No Such Directory", Colors::BrightBlueFg);
+                            Ok(str)
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            Err(e)
+                        }
+                    };
+                }
+            }
         } else {
             return match dir {
                 Ok(dir) => {
@@ -33,7 +98,7 @@ impl Dir {
         }
     }
     //获取当前目录下的文件
-    pub fn get_next_dir(input: String) -> Vec<String> {
+    pub fn get_current_directory(input: String) -> Vec<String> {
         let mut file_name = Vec::new();
 
         let dir = fs::read_dir(input.trim_end());

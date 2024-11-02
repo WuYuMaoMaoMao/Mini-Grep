@@ -6,8 +6,9 @@ pub mod read;
 use colorized::*;
 use std::{
     self,
+    env::current_dir,
     fs::{self, File},
-    io::{self, stdin, Read, Write},
+    io::{self, stdin, Error, Read, Write},
     path::PathBuf,
 };
 pub fn remove_quotes(s: &str) -> String {
@@ -24,7 +25,10 @@ pub fn change_filepath_for_windows(filepath: &str) -> String {
     new_filepath = new_filepath.replace("\\", "/");
     new_filepath
 }
-
+pub fn convert_pathbuf_to_string(pathbuf: &PathBuf) -> String {
+    let path = pathbuf.to_string_lossy().to_string();
+    path
+}
 // pub fn change_color() {
 //     println!("{}", "This is so cool".color(Colors::BrightGreenFg));
 //     let this: String = colorize_this("wowzers", Colors::BrightBlackBg);
@@ -44,50 +48,55 @@ fn main() {
     );
     colorize_println("Welcome to the mini shell", Colors::BrightBlueFg);
     colorize_println("查看帮助:MiniLog --help", Colors::BrightBlueFg);
-    mini_shell(" ".to_string());
+    let dir = std::env::current_dir();
+    mini_shell(dir, " ".to_string());
 }
-pub fn print_path(path: String) {
-    if path == " ".to_string() {
-        let dir = dir::Dir::get_current_dir(path).expect("Failed to get current directory") + ">";
-        colorize_print(dir, Colors::BrightBlueFg);
-    } else {
-    }
+pub fn convert_to_result(dir: String) -> Result<PathBuf, std::io::Error> {
+    let path = PathBuf::from(dir);
+    Ok(path)
 }
-pub fn mini_shell(input: String) {
-    print_path(input);
+pub fn convert_pathbuf_to_result(path: PathBuf) -> Result<PathBuf, std::io::Error> {
+    Ok(path)
+}
+pub fn mini_shell(path: Result<PathBuf, std::io::Error>, input: String) {
+    let dir = dir::Dir::get_current_dir(input, path).expect("failed to get current directory");
+    let dir_clone = dir.clone();
+    let dir_result: Result<PathBuf, io::Error> = convert_to_result(dir);
+    colorize_print(dir_clone + ">", Colors::BrightBlueFg);
     let _ = io::stdout().flush();
     let mut input = String::new();
     stdin().read_line(&mut input).expect("Failed to read line");
     if input.trim() == "MiniLog --help" {
-        mini_log_help();
+        mini_log_help(dir_result, input);
     } else if input.trim() == "MiniLog --directory" {
-        mini_log_directory();
+        mini_log_directory(dir_result, input);
     } else if input.trim() == "MiniLog --version" {
-        mini_log_version();
+        mini_log_version(dir_result, input);
     } else if input.trim() == "MiniLog --author" {
-        mini_log_author();
+        mini_log_author(dir_result, input);
     } else if input.trim().to_string().find("cat") != None {
-        cat_file(input);
+        cat_file(dir_result, input);
     } else if input.trim().to_string().to_lowercase() == "ls" {
-        let dir = dir::Dir::get_current_dir(input).expect("failed to get current directory");
-        let lists = ls::LS::ls(dir);
+        let dir = dir_result.unwrap();
+        let lists = ls::LS::ls(convert_pathbuf_to_string(&dir));
         ls::LS::print_ls_directory(lists);
-        mini_shell(" ".to_string());
+        let dir_result = convert_pathbuf_to_result(dir);
+        mini_shell(dir_result, " ".to_string());
     } else if input.trim().to_string().find("cd") != None {
-        if input.trim().to_string().find("cd ..") != None {
-            cd::CD::get_prev_dir(input);
+        if input.trim().to_string().find("cd .") != None {
+            mini_shell(dir_result, input);
         } else {
-            cd::CD::get_next_dir(input);
+            mini_shell(dir_result, input);
         }
     } else if input.trim().to_string().to_uppercase() == "EXIT" {
         colorize_println("退出MiniShell", Colors::BrightBlueFg);
         std::process::exit(0);
     } else {
         colorize_println("请输入正确的命令", Colors::BrightBlueFg);
-        mini_shell(" ".to_string());
+        mini_shell(dir_result, " ".to_string());
     }
 }
-pub fn mini_log_help() {
+pub fn mini_log_help(path: Result<PathBuf, std::io::Error>, input: String) {
     colorize_println(
         "1.MiniLog --directory:进入路径获取目录",
         Colors::BrightRedFg,
@@ -103,33 +112,33 @@ pub fn mini_log_help() {
     colorize_println("6.ls:查看当前路径目录", Colors::RedFg);
     colorize_println("7.cd <路径>:切换路径", Colors::BrightBlueFg);
     colorize_println("8.exit:退出MiniShell", Colors::BrightBlueFg);
-    mini_shell(" ".to_string());
+    mini_shell(path, input);
 }
-pub fn mini_log_version() {
+pub fn mini_log_version(path: Result<PathBuf, std::io::Error>, input: String) {
     let str = "MiniLog version:".to_string();
     let cargo_version = str + env::CargoFile::get_version().as_str();
     println!("{}", cargo_version.color(Colors::BrightCyanFg));
-    mini_shell(" ".to_string());
+    mini_shell(path, input);
 }
-pub fn mini_log_author() {
+pub fn mini_log_author(path: Result<PathBuf, std::io::Error>, input: String) {
     let str = "MiniLog author: ".to_string();
     let author_str = str + env::CargoFile::get_authors().as_str();
     println!("{}", author_str.color(Colors::BrightGreenFg));
-    mini_shell(" ".to_string());
+    mini_shell(path, input);
 }
-pub fn mini_log_directory() {
+pub fn mini_log_directory(path: Result<PathBuf, std::io::Error>, input_str: String) {
     colorize_println("请输入要读取的绝对文件路径: ", Colors::BrightRedFg);
     let mut input = String::new();
     stdin().read_line(&mut input).expect("Failed to read line");
-    let str = dir::Dir::get_next_dir(input);
+    let str = dir::Dir::get_current_directory(input);
     colorize_println("当前目录下有:", Colors::BrightRedFg);
     for file in str {
         println!("{}", file.color(Colors::BrightRedFg));
     }
-    mini_shell(" ".to_string());
+    mini_shell(path, input_str);
 }
 
-pub fn cat_file(input: String) {
+pub fn cat_file(path: Result<PathBuf, std::io::Error>, input: String) {
     let file_name = input.trim_end().split("cat");
     let mut file = vec![];
     for part in file_name {
@@ -148,5 +157,5 @@ pub fn cat_file(input: String) {
             println!("读取文件失败");
         }
     };
-    mini_shell(" ".to_string());
+    mini_shell(path, input);
 }
