@@ -1,7 +1,7 @@
 use crate::ls;
 use crate::read;
 use colorized::*;
-use std::{env::current_dir, fs, path::PathBuf};
+use std::{env::current_dir, fs, fs::File, path::PathBuf};
 pub struct Dir {}
 pub fn convert_pathbuf_to_string(pathbuf: &PathBuf) -> String {
     let path = pathbuf.to_string_lossy().to_string();
@@ -10,13 +10,21 @@ pub fn convert_pathbuf_to_string(pathbuf: &PathBuf) -> String {
 pub fn convert_pathbuf_to_result(path: PathBuf) -> Result<PathBuf, std::io::Error> {
     Ok(path)
 }
+pub fn check_file(path: &str) -> bool {
+    let f = File::open(path);
+    let result = match f {
+        Ok(_) => true,
+        Err(_) => false,
+    };
+    result
+}
 impl Dir {
     //获取当前目录
     pub fn get_current_dir(
         input: String,
         dir: Result<PathBuf, std::io::Error>,
     ) -> std::io::Result<String> {
-        if input.trim().find("cd ..") != None {
+        if input.trim().find("cd .") != None {
             return match dir {
                 Ok(dir) => {
                     let dir_display = dir.display().to_string();
@@ -33,6 +41,7 @@ impl Dir {
                         }
                     } else {
                         str_current = str[0].to_string();
+                        println!("Error:{}", str_current)
                     }
                     Ok(str_current)
                 }
@@ -97,13 +106,49 @@ impl Dir {
             };
         }
     }
-    //获取当前目录下的文件
+    //获取当前目录下的文件和目录
     pub fn get_current_directory(input: String) -> Vec<String> {
         let mut file_name = Vec::new();
 
         let dir = fs::read_dir(input.trim_end());
         if dir.is_err() {
             colorize_println("读取文件失败 ", Colors::BrightRedFg);
+        }
+        let dir_match = dir.unwrap();
+        for entry in dir_match {
+            let file_name_str = entry.unwrap().file_name().into_string();
+            if file_name_str.is_err() {
+                colorize_println("文件名转换失败", Colors::BrightRedFg);
+            }
+            match file_name_str {
+                Ok(v) => {
+                    file_name.push(String::from(v));
+                }
+                Err(_) => {
+                    println!("文件名转换失败");
+                }
+            };
+        }
+        // println!("{:?}", file_name);
+        let dir_name = input.trim_end().split("\\");
+
+        let dir_name_vec: Vec<&str> = dir_name.collect();
+        // print!("{:?}", dir_name_vec[dir_name_vec.len() - 1]);
+
+        let directory = read::Directory {
+            path: input.trim().to_string(),
+            name: String::from(dir_name_vec[dir_name_vec.len() - 1]),
+            files: file_name,
+        };
+        //
+        return directory.files;
+    }
+    pub fn get_current_files(input: String) -> Vec<String> {
+        let mut file_name = Vec::new();
+
+        let dir = fs::read_dir(std::path::Path::new(input.trim_end()));
+        if dir.is_err() {
+            colorize_println("文件不存在", Colors::BrightRedFg);
         }
         let dir_match = dir.unwrap();
         for entry in dir_match {
