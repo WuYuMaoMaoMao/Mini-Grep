@@ -1,6 +1,6 @@
-pub mod cd;
 pub mod dir;
 pub mod env;
+pub mod find;
 pub mod ls;
 pub mod read;
 use colorized::*;
@@ -76,6 +76,10 @@ pub fn mini_shell(path: Result<PathBuf, std::io::Error>, input: String) {
         mini_log_author(dir_result, input);
     } else if input.trim().to_string().find("cat") != None {
         cat_file(dir_result, input);
+    } else if input.trim().to_string().contains("find") {
+        find::Find::find_grep(input, dir_result); //input find grep in directory or file,directory is the current directory
+
+    // mini_shell(dir_result, input);
     } else if input.trim().to_string().to_lowercase() == "ls" {
         let dir = dir_result.unwrap();
         let lists = ls::LS::ls(convert_pathbuf_to_string(&dir));

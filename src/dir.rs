@@ -40,8 +40,7 @@ impl Dir {
                             }
                         }
                     } else {
-                        str_current = str[0].to_string();
-                        println!("Error:{}", str_current)
+                        str_current = str[0].to_string() + "\\";
                     }
                     Ok(str_current)
                 }

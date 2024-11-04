@@ -1,6 +1,6 @@
 [package]
 name = "MiniLog"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["WuYuMaoMao"]
 
@@ -10,3 +10,4 @@ authors = ["WuYuMaoMao"]
 rust_xlsxwriter = "0.79.0"
 hotkey-rs = "0.1.2"
 colorized = "1.0.0"
+regex = "1.10.4"
