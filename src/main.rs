@@ -14,17 +14,6 @@ use std::{
 pub fn remove_quotes(s: &str) -> String {
     s.trim_matches(|c| c == '\"' || c == '\'').to_string()
 }
-pub fn read_from_file(filepath: &str) -> Result<String, io::Error> {
-    let mut f = File::open(filepath)?;
-    let mut s = String::new();
-    f.read_to_string(&mut s)?;
-    Ok(s)
-}
-pub fn change_filepath_for_windows(filepath: &str) -> String {
-    let mut new_filepath = filepath.to_string();
-    new_filepath = new_filepath.replace("\\", "/");
-    new_filepath
-}
 pub fn convert_pathbuf_to_string(pathbuf: &PathBuf) -> String {
     let path = pathbuf.to_string_lossy().to_string();
     path
@@ -59,8 +48,10 @@ pub fn convert_pathbuf_to_result(path: PathBuf) -> Result<PathBuf, std::io::Erro
     Ok(path)
 }
 pub fn mini_shell(path: Result<PathBuf, std::io::Error>, input: String) {
+    let input_clone = input.clone();
     let dir = dir::Dir::get_current_dir(input, path).expect("failed to get current directory");
     let dir_clone = dir.clone();
+    let dir_shell_result = dir_clone.clone();
     let dir_result: Result<PathBuf, io::Error> = convert_to_result(dir);
     colorize_print(dir_clone + ">", Colors::BrightBlueFg);
     let _ = io::stdout().flush();
@@ -77,9 +68,9 @@ pub fn mini_shell(path: Result<PathBuf, std::io::Error>, input: String) {
     } else if input.trim().to_string().find("cat") != None {
         cat_file(dir_result, input);
     } else if input.trim().to_string().contains("find") {
+        let dir_shell_result = convert_to_result(dir_shell_result);
         find::Find::find_grep(input, dir_result); //input find grep in directory or file,directory is the current directory
-
-    // mini_shell(dir_result, input);
+        mini_shell(dir_shell_result, input_clone);
     } else if input.trim().to_string().to_lowercase() == "ls" {
         let dir = dir_result.unwrap();
         let lists = ls::LS::ls(convert_pathbuf_to_string(&dir));
@@ -147,12 +138,12 @@ pub fn cat_file(path: Result<PathBuf, std::io::Error>, input: String) {
     let mut file = vec![];
     for part in file_name {
         if part.trim() != "" {
-            let file_path = change_filepath_for_windows(part.trim());
+            let file_path = find::change_filepath_for_windows(part.trim());
             file.push(file_path);
         }
     }
     let file_path = &file[0];
-    let result = read_from_file(file_path.as_str()); // 读取文件
+    let result = find::read_from_file(file_path.as_str()); // 读取文件
     match result {
         Ok(v) => {
             println!("{}", v);

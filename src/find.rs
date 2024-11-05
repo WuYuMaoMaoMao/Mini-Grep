@@ -1,11 +1,50 @@
 use crate::dir;
 use colorized::*;
+use std::fs::{self, File};
+use std::io;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Read;
 use std::path::PathBuf;
 pub struct Find {}
+pub fn change_filepath_for_windows(filepath: &str) -> String {
+    let mut new_filepath = filepath.to_string();
+    new_filepath = new_filepath.replace("\\", "/");
+    new_filepath
+}
+pub fn read_from_file(filepath: &str) -> Result<String, io::Error> {
+    let mut f = File::open(filepath)?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+
+fn read_file_line_by_line(filepath: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let file = File::open(filepath)?;
+    let reader = BufReader::new(file);
+    let lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
+    Ok(lines)
+}
+pub fn find_grep_line(grep: String, file_path: String) {
+    let file_content = read_file_line_by_line(&file_path);
+    match file_content {
+        Ok(v) => {
+            for line in v {
+                if line.contains(&grep) {
+                    colorize_println(&line, Colors::BrightMagentaFg);
+                }
+            }
+        }
+        Err(_) => {
+            colorize_println("读取文件失败", Colors::BrightMagentaFg);
+        }
+    };
+}
 impl Find {
     pub fn find_grep(input: String, directory: Result<PathBuf, std::io::Error>) {
         let dir_str = dir::convert_pathbuf_to_string(&directory.unwrap());
         let input_vaild = input.clone();
+        let input_grep = input_vaild.clone();
         let directory_clone = dir_str.clone();
         let dirs = dir::Dir::get_current_directory(dir_str);
         let dir_or_file = Self::input_dir_or_file(input);
@@ -14,7 +53,12 @@ impl Find {
                 colorize_println("No Such File or Directory", Colors::BrightMagentaFg);
             } else {
                 let path = directory_clone + "\\" + &dir_or_file;
-                if dir::check_file(&path) {}
+                if dir::check_file(&path) {
+                    let file_path = change_filepath_for_windows(&path);
+                    let grep_name = Self::grep_name(input_grep);
+                    find_grep_line(grep_name, file_path);
+                } else {
+                }
             }
         } else {
             colorize_println(
@@ -32,6 +76,11 @@ impl Find {
         } else {
             return false;
         }
+    }
+    pub fn grep_name(input: String) -> String {
+        let input_vec: Vec<&str> = input.trim().split(" ").collect();
+        let grep = input_vec[1];
+        return grep.to_string();
     }
     pub fn input_dir_or_file(input: String) -> String {
         let input_vec: Vec<&str> = input.trim().split(" ").collect();
