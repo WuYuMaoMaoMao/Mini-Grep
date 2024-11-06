@@ -19,11 +19,39 @@ pub fn read_from_file(filepath: &str) -> Result<String, io::Error> {
     Ok(s)
 }
 
-fn read_file_line_by_line(filepath: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn read_file_line_by_line(filepath: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let file = File::open(filepath)?;
     let reader = BufReader::new(file);
     let lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
     Ok(lines)
+}
+pub fn find_grep_line_by_directory(grep: String, dir_path: String) {
+    let dir_files = dir::Dir::get_current_files(dir_path);
+    for file in dir_files {
+        let file_clone = file.clone();
+        let file_content = read_file_line_by_line(&file);
+        colorize_println(
+            "--------------------------------------begin-------------------------------------------------------",
+            Colors::BrightMagentaFg,
+        );
+        println!("{}", file_clone.color(Colors::BrightMagentaFg));
+        match file_content {
+            Ok(v) => {
+                for line in v {
+                    if line.contains(&grep) {
+                        colorize_println(&line, Colors::BrightMagentaFg);
+                    }
+                }
+            }
+            Err(_) => {
+                colorize_println("读取文件失败", Colors::BrightMagentaFg);
+            }
+        }
+        colorize_println(
+            "--------------------------------------end----------------------------------------------------------",
+            Colors::BrightMagentaFg,
+        );
+    }
 }
 pub fn find_grep_line(grep: String, file_path: String) {
     let file_content = read_file_line_by_line(&file_path);
@@ -58,6 +86,9 @@ impl Find {
                     let grep_name = Self::grep_name(input_grep);
                     find_grep_line(grep_name, file_path);
                 } else {
+                    let dir_path = change_filepath_for_windows(&path);
+                    let grep_name = Self::grep_name(input_grep);
+                    find_grep_line_by_directory(grep_name, dir_path); //dir_path:目录路径,grep_name:要搜索的字符串
                 }
             }
         } else {

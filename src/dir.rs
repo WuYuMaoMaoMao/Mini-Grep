@@ -2,6 +2,7 @@ use crate::ls;
 use crate::read;
 use colorized::*;
 use std::{env::current_dir, fs, fs::File, path::PathBuf};
+#[derive(Debug)]
 pub struct Dir {}
 pub fn convert_pathbuf_to_string(pathbuf: &PathBuf) -> String {
     let path = pathbuf.to_string_lossy().to_string();
@@ -18,6 +19,7 @@ pub fn check_file(path: &str) -> bool {
     };
     result
 }
+
 impl Dir {
     //获取当前目录
     pub fn get_current_dir(
@@ -144,7 +146,7 @@ impl Dir {
     }
     pub fn get_current_files(input: String) -> Vec<String> {
         let mut file_name = Vec::new();
-
+        let input_clone = &input;
         let dir = fs::read_dir(std::path::Path::new(input.trim_end()));
         if dir.is_err() {
             colorize_println("文件不存在", Colors::BrightRedFg);
@@ -157,7 +159,10 @@ impl Dir {
             }
             match file_name_str {
                 Ok(v) => {
-                    file_name.push(String::from(v));
+                    let file_path = input_clone.to_owned() + &"/" + &v;
+                    if check_file(&file_path) {
+                        file_name.push(file_path);
+                    }
                 }
                 Err(_) => {
                     println!("文件名转换失败");
