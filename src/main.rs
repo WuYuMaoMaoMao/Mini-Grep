@@ -1,6 +1,7 @@
 pub mod dir;
 pub mod env;
 pub mod find;
+pub mod gex;
 pub mod ls;
 pub mod read;
 use colorized::*;
@@ -71,6 +72,8 @@ pub fn mini_shell(path: Result<PathBuf, std::io::Error>, input: String) {
         let dir_shell_result = convert_to_result(dir_shell_result);
         find::Find::find_grep(input, dir_result); //input find grep in directory or file,directory is the current directory
         mini_shell(dir_shell_result, input_clone);
+    } else if input.trim().to_string().contains("regex") {
+        gex::Gex::read_regex(); //input regex in directory or file,directory is the current directory
     } else if input.trim().to_string().to_lowercase() == "ls" {
         let dir = dir_result.unwrap();
         let lists = ls::LS::ls(convert_pathbuf_to_string(&dir));
